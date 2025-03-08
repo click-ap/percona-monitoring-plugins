@@ -49,7 +49,7 @@ $timezone   = null;    # If not set, uses the system default.  Example: "UTC"
 $chk_options = array (
    'innodb'  => true,    # Do you want to check InnoDB statistics?
    'master'  => true,    # Do you want to check binary logging?
-   'slave'   => true,    # Do you want to check slave status?
+   'slave'   => FALSE,    # Do you want to check slave status?
    'procs'   => true,    # Do you want to check SHOW PROCESSLIST?
    'get_qrt' => true,    # Get query response times from Percona Server or MariaDB?
 );
@@ -220,7 +220,7 @@ EOF;
 # Parse command-line arguments, in the format --arg value --arg value, and
 # return them as an array ( arg => value )
 # ============================================================================
-function parse_cmdline( $args ) {
+function parse_cmdline0( $args ) {
    $options = array();
    while (list($tmp, $p) = each($args)) {
       if (strpos($p, '--') === 0) {
@@ -232,6 +232,30 @@ function parse_cmdline( $args ) {
          }
          $options[$param] = $value;
       }
+   }
+   if ( array_key_exists('host', $options) ) {
+      $options['host'] = substr($options['host'], 0, 4) == 'tcp:' ? substr($options['host'], 4) : $options['host'];
+   }
+   debug($options);
+   return $options;
+}
+function parse_cmdline( $args ) {
+   $options = array();
+   $obj = new ArrayObject( $args );
+   $it = $obj->getIterator();
+   echo "Iterating over: " . $obj->count() . " values\n";
+   while( $it->valid() ) {
+      $p = $it->current();
+      if (strpos($p, '--') === 0) {
+         $param = substr($p, 2);
+         $value = null;
+         $it->next();
+         if ($it->valid() && strpos($it->current(), '--') !==0 ) {
+            $value = $it->current();
+         }
+         $options[$param] = $value;
+      }
+      $it->next();
    }
    if ( array_key_exists('host', $options) ) {
       $options['host'] = substr($options['host'], 0, 4) == 'tcp:' ? substr($options['host'], 4) : $options['host'];
